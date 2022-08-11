@@ -1,13 +1,12 @@
 //! tests/health_check.rs
 
-use sqlx::{PgPool, PgConnection, Connection, Executor};
+use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
-use zero2prod::configuration::{get_configuration, DatabaseSettings};
 use uuid::Uuid;
-
+use zero2prod::configuration::{get_configuration, DatabaseSettings};
 pub struct TestApp {
     pub address: String,
-    pub db_pool: PgPool
+    pub db_pool: PgPool,
 }
 
 async fn spawn_app() -> TestApp {
@@ -23,13 +22,14 @@ async fn spawn_app() -> TestApp {
     // The Connection trait must be in scope for us to invoke PgConnection::connect
     let connection_pool = configure_database(&configuration.database).await;
 
-    let server = zero2prod::startup::run(listener, connection_pool.clone()).expect("Failed to bind address");
+    let server =
+        zero2prod::startup::run(listener, connection_pool.clone()).expect("Failed to bind address");
     let _ = tokio::spawn(server);
 
     // Return the application address to the caller
     TestApp {
         address,
-        db_pool: connection_pool
+        db_pool: connection_pool,
     }
 }
 
@@ -41,7 +41,7 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
         .execute(format!(r#"CREATE DATABASE "{}";"#, config.database_name).as_str())
         .await
         .expect("Failed to create a database.");
-    
+
     // Migrate database
     let connection_pool = PgPool::connect(&config.connection_string())
         .await
@@ -50,7 +50,7 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
         .run(&connection_pool)
         .await
         .expect("Failed to migrate the database");
-    
+
     connection_pool
 }
 
