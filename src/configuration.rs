@@ -65,17 +65,14 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
         .unwrap_or_else(|_| "local".into())
         .try_into()
         .expect("Failed to parse APP_ENVIRONMENT");
+    let environment_filename = format!("{}.yaml", environment.as_str());
+    let settings = config::Config::builder()
+        .add_source(config::File::from(configuration_directory.join("base.yaml")))
+        .add_source(config::File::from(configuration_directory.join(&environment_filename)))
+        .add_source(config::Environment::with_prefix("APP").prefix_separator("_").separator("__"))
+        .build()?;
 
-    // Layer on the environment-specific values.
-    settings.merge(
-        config::File::from(configuration_directory.join(environment.as_str())).required(true),
-    )?;
-
-    // Add in settings from env variables (with a prefix of APP and __ as separator)
-    // E.g. APP_APPLICATION__PORT = 5001
-    settings.merge(config::Environment::with_prefix("app").separator("__"))?;
-
-    settings.try_into()
+    settings.try_deserialize::<Settings>()
 }
 
 /// The possible runtime env for our application
