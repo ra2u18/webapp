@@ -7,7 +7,7 @@ use zero2prod::{
     telemetry::{get_subscriber, init_subscriber},
 };
 
-use sqlx::{PgPool, postgres::PgPoolOptions};
+use sqlx::postgres::PgPoolOptions;
 use std::net::TcpListener;
 
 #[tokio::main]
