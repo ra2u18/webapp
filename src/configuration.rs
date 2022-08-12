@@ -53,12 +53,8 @@ impl DatabaseSettings {
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
-    let mut settings = config::Config::default();
     let base_path = std::env::current_dir().expect("Failed to determine the current directory");
     let configuration_directory = base_path.join("configuration");
-
-    // Read the "default" configuration file
-    settings.merge(config::File::from(configuration_directory.join("base")).required(true))?;
 
     // Detect the running env, default to local if unspecified
     let environment: Environment = std::env::var("APP_ENVIRONMENT")
@@ -75,7 +71,7 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
     settings.try_deserialize::<Settings>()
 }
 
-/// The possible runtime env for our application
+/// The possible runtime env for our application`
 pub enum Environment {
     Local,
     Production,
