@@ -2,6 +2,8 @@
 
 use zero2prod::{
     configuration::{get_configuration, DatabaseSettings},
+    email_client::EmailClient,
+    startup::run,
     telemetry::{get_subscriber, init_subscriber},
 };
 
@@ -43,8 +45,22 @@ async fn spawn_app() -> TestApp {
     // The Connection trait must be in scope for us to invoke PgConnection::connect
     let connection_pool = configure_database(&configuration.database).await;
 
+    // Build a new email client
+    let sender_email = configuration
+        .email_client
+        .sender()
+        .expect("Invalid sender email address");
+    let timeout = configuration.email_client.timeout();
+
+    let email_client = EmailClient::new(
+        configuration.email_client.base_url,
+        sender_email,
+        configuration.email_client.authorization_token,
+        timeout
+    );
+
     let server =
-        zero2prod::startup::run(listener, connection_pool.clone()).expect("Failed to bind address");
+        run(listener, connection_pool.clone(), email_client).expect("Failed to bind address");
     let _ = tokio::spawn(server);
 
     // Return the application address to the caller
