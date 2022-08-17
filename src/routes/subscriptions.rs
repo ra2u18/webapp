@@ -46,10 +46,7 @@ pub async fn subscribe(
 
     match insert_subscriber(&pool, &new_subscriber).await {
         Ok(_) => HttpResponse::Ok().finish(),
-        Err(err) => { 
-            dbg!("{:?}", err);
-            HttpResponse::InternalServerError().finish()
-        },
+        Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
 
