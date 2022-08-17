@@ -4,13 +4,11 @@ use crate::domain::SubscriberEmail;
 
 use reqwest::Client;
 use secrecy::{ExposeSecret, Secret};
-use serde::Serialize;
 
 pub struct EmailClient {
     base_url: String,
     http_client: Client,
     sender: SubscriberEmail,
-    // We don't want to log it by accident
     authorization_token: Secret<String>,
 }
 
@@ -39,6 +37,7 @@ impl EmailClient {
         text_content: &str,
     ) -> Result<(), reqwest::Error> {
         let url = format!("{}/email", self.base_url);
+        
         let request_body = SendEmailRequest {
             from: self.sender.as_ref(),
             to: recipient.as_ref(),
@@ -56,14 +55,12 @@ impl EmailClient {
             .json(&request_body)
             .send()
             .await?
-            // Send the response into an error if the server returned an error
             .error_for_status()?;
-
         Ok(())
     }
 }
 
-#[derive(Serialize)]
+#[derive(serde::Serialize)]
 #[serde(rename_all = "PascalCase")]
 struct SendEmailRequest<'a> {
     from: &'a str,

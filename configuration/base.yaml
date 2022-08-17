@@ -11,5 +11,5 @@ database:
 email_client:
   base_url: "localhost"
   sender_email: "test@gmail.com"
-  authorization_token: "0fbdb084-f30f-4565-8786-5cd77ca71545"
+  authorization_token: "e0620c81-1497-4de7-b966-16cfe5207a89"
   timeout_milliseconds: 10000
