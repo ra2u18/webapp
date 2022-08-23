@@ -21,6 +21,7 @@ chrono = "0.4.15"
 log = "0.4"
 validator = "0.14"
 rand = { version = "0.8", features = ["std_rng"] }
+thiserror = "1"
 
 tracing = "0.1.19"
 tracing-actix-web = "0.6"
