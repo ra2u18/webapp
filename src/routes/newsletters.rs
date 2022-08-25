@@ -6,7 +6,7 @@ use actix_web::{
     web, HttpRequest, HttpResponse, ResponseError,
 };
 use anyhow::Context;
-use secrecy::Secret;
+use secrecy::{Secret, ExposeSecret};
 use sqlx::PgPool;
 
 #[derive(thiserror::Error)]
@@ -57,6 +57,11 @@ struct ConfirmedSubscriber {
     email: SubscriberEmail,
 }
 
+#[tracing::instrument(
+    name = "Publish a newsletter issue",
+    skip(body, pool, email_client, request),
+    fields(username=tracing::field::Empty, user_id=tracing::field::Empty)
+)]
 pub async fn publish_newsletter(
     body: web::Json<BodyData>,
     pool: web::Data<PgPool>,
@@ -64,7 +69,11 @@ pub async fn publish_newsletter(
     // New extractor
     request: HttpRequest,
 ) -> Result<HttpResponse, PublishError> {
-    let _credentials = basic_authentication(request.headers()).map_err(PublishError::AuthError)?;
+    let credentials = basic_authentication(request.headers()).map_err(PublishError::AuthError)?;
+    tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
+
+    let user_id = validate_credentials(credentials, &pool).await?;
+    tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
 
     let subscribers = get_confirmed_subscribers(&pool).await?;
 
@@ -157,4 +166,27 @@ fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Erro
         username,
         password: Secret::new(password),
     })
+}
+
+async fn validate_credentials(
+    credentials: Credentials,
+    pool: &PgPool
+) -> Result<uuid::Uuid, PublishError> {
+    let user_id: Option<_> = sqlx::query!(
+        r#"
+        SELECT user_id
+        FROM users
+        WHERE username = $1 AND password = $2
+        "#,
+        credentials.username,
+        credentials.password.expose_secret()
+    )
+    .fetch_optional(pool)
+    .await
+    .context("Failed to perform a query to validate auth credentials")
+    .map_err(PublishError::UnexpectedError)?;
+
+    user_id.map(|row| row.user_id)
+        .ok_or_else(|| anyhow::anyhow!("Invalid username or password"))
+        .map_err(PublishError::AuthError)
 }
