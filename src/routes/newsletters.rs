@@ -1,9 +1,7 @@
 //! src/routes/newsletters.rs
 use crate::{
-    domain::SubscriberEmail, 
-    email_client::EmailClient, 
-    routes::error_chain_fmt,
-    telemetry::spawn_blocking_with_tracing
+    domain::SubscriberEmail, email_client::EmailClient, routes::error_chain_fmt,
+    telemetry::spawn_blocking_with_tracing,
 };
 
 use actix_web::{
@@ -180,10 +178,22 @@ async fn validate_credentials(
     credentials: Credentials,
     pool: &PgPool,
 ) -> Result<uuid::Uuid, PublishError> {
-    let (user_id, expected_password_hash) = get_stored_credentials(&credentials.username, &pool)
-        .await
-        .map_err(PublishError::UnexpectedError)?
-        .ok_or_else(|| PublishError::AuthError(anyhow::anyhow!("Unknown username")))?;
+    let mut user_id = None;
+    let mut expected_password_hash = Secret::new(
+        "$argon2id$v=19$m=15000,t=2,p=1$\
+        gZiV/M1gPc22ElAH/Jh1Hw$\
+        CWOrkoo7oJBQ/iyh7uJ0LO2aLEfrHwTWllSAxT0zRno"
+            .to_string(),
+    );
+
+    if let Some((stored_user_id, stored_password_hash)) =
+        get_stored_credentials(&credentials.username, &pool)
+            .await
+            .map_err(PublishError::UnexpectedError)?
+    {
+        user_id = Some(stored_user_id);
+        expected_password_hash = stored_password_hash;
+    }
 
     // This executes before spawning the new thread
     spawn_blocking_with_tracing(move || {
@@ -193,7 +203,11 @@ async fn validate_credentials(
     .context("Failed to spawn a blocking task")
     .map_err(PublishError::UnexpectedError)??;
 
-    Ok(user_id)
+    // This is only set to Some if we found credentials in the store
+    // So, even if the default password ends up matching with the provided pass
+    // we never authenticate a non-existing user
+
+    user_id.ok_or_else(|| PublishError::AuthError(anyhow::anyhow!("Unknown username")))
 }
 
 #[tracing::instrument(name = "Get stored credentials", skip(username, pool))]
@@ -223,16 +237,17 @@ async fn get_stored_credentials(
 )]
 fn verify_password_hash(
     expected_password_hash: Secret<String>,
-    password_candidate: Secret<String>
+    password_candidate: Secret<String>,
 ) -> Result<(), PublishError> {
     let expected_password_hash = PasswordHash::new(&expected_password_hash.expose_secret())
         .context("Failed to parse hash in PHC string format")
         .map_err(PublishError::UnexpectedError)?;
 
-    Argon2::default().verify_password(
-        password_candidate.expose_secret().as_bytes(),
-        &expected_password_hash,
-    )
-    .context("Invalid password")
-    .map_err(PublishError::AuthError)
+    Argon2::default()
+        .verify_password(
+            password_candidate.expose_secret().as_bytes(),
+            &expected_password_hash,
+        )
+        .context("Invalid password")
+        .map_err(PublishError::AuthError)
 }

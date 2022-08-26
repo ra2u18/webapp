@@ -1,9 +1,9 @@
 //! tests/api/newsletter
 
 use crate::helpers::{spawn_app, ConfirmationLinks, TestApp};
+use uuid::Uuid;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, ResponseTemplate};
-use uuid::Uuid;
 
 #[tokio::test]
 async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
