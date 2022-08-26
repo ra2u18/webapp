@@ -9,7 +9,7 @@ use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
 
 use argon2::password_hash::SaltString;
-use argon2::{Argon2, PasswordHasher, Algorithm, Params, Version};
+use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
 
 use wiremock::MockServer;
 
@@ -168,7 +168,7 @@ impl TestUser {
         let password_hash = Argon2::new(
             Algorithm::Argon2id,
             Version::V0x13,
-            Params::new(15000, 2, 1, None).unwrap()
+            Params::new(15000, 2, 1, None).unwrap(),
         )
         .hash_password(self.password.as_bytes(), &salt)
         .unwrap()
