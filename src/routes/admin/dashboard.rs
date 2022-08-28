@@ -1,5 +1,6 @@
 //! src/routes/admin/dashboard.rs
 use crate::session_state::TypedSession;
+use crate::utils::{e500, see_other};
 
 use actix_web::http::header::{ContentType, LOCATION};
 use actix_web::{web, HttpResponse};
@@ -7,13 +8,6 @@ use actix_web::{web, HttpResponse};
 use anyhow::Context;
 use sqlx::PgPool;
 use uuid::Uuid;
-
-fn e500<T>(e: T) -> actix_web::Error
-where
-    T: std::fmt::Debug + std::fmt::Display + 'static,
-{
-    actix_web::error::ErrorInternalServerError(e)
-}
 
 pub async fn admin_dashboard(
     session: TypedSession,
@@ -24,7 +18,7 @@ pub async fn admin_dashboard(
     } else {
         return Ok(HttpResponse::SeeOther()
             .insert_header((LOCATION, "/login"))
-            .finish())
+            .finish());
     };
 
     Ok(HttpResponse::Ok()
@@ -39,6 +33,15 @@ pub async fn admin_dashboard(
 </head>
 <body>
     <p>Welcome {username}!</p>
+    <p>Available actions:</p>
+    <ol>
+        <li><a href="/admin/password">Change Password</a<</li>
+        <li>
+            <form name="logoutForm" action="/admin/logout" method="post">
+                <input type="submit" value="Logout">
+            </form>
+        </li>
+    </ol>
 </body>
 </html>
         "#
@@ -46,7 +49,7 @@ pub async fn admin_dashboard(
 }
 
 #[tracing::instrument(name = "Get username", skip(pool))]
-async fn get_username(user_id: Uuid, pool: &PgPool) -> Result<String, anyhow::Error> {
+pub async fn get_username(user_id: Uuid, pool: &PgPool) -> Result<String, anyhow::Error> {
     let row = sqlx::query!(
         r#"
             SELECT username
@@ -58,5 +61,6 @@ async fn get_username(user_id: Uuid, pool: &PgPool) -> Result<String, anyhow::Er
     .fetch_one(pool)
     .await
     .context("Failed to perform a query to retrieve a username.")?;
+
     Ok(row.username)
 }

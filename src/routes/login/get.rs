@@ -5,9 +5,11 @@ use actix_web_flash_messages::{IncomingFlashMessages, Level};
 use std::fmt::Write;
 
 pub async fn login_form(flash_messages: IncomingFlashMessages) -> HttpResponse {
-    let mut error_html = String::new();
-    for m in flash_messages.iter().filter(|m| m.level() == Level::Error) {
-        writeln!(error_html, "<p><i>{}</i></p>", m.content()).unwrap();
+    let mut flash_html = String::new();
+
+    // Display all message levels, not only errors
+    for m in flash_messages.iter() {
+        writeln!(flash_html, "<p><i>{}</i></p>", m.content()).unwrap();
     }
 
     HttpResponse::Ok()
@@ -21,7 +23,7 @@ pub async fn login_form(flash_messages: IncomingFlashMessages) -> HttpResponse {
     <title>Login</title>
 </head>
 <body>
-    {error_html}
+    {flash_html}
     <form action="/login" method="post">
         <label>Username
             <input 
