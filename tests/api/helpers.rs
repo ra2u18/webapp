@@ -42,6 +42,18 @@ pub struct TestApp {
 }
 
 impl TestApp {
+    pub async fn get_admin_dashboard(&self) -> reqwest::Response {
+        self.api_client
+            .get(format!("{}/admin/dashboard", &self.address))
+            .send()
+            .await
+            .expect("Failed to execute request")
+    }
+
+    pub async fn get_admin_dashboard_html(&self) -> String {
+        self.get_admin_dashboard().await.text().await.unwrap()
+    }
+
     pub async fn get_login_html(&self) -> String {
         self.api_client
             .get(format!("{}/login", &self.address))
@@ -188,7 +200,7 @@ impl TestUser {
         Self {
             user_id: Uuid::new_v4(),
             username: Uuid::new_v4().to_string(),
-            password: Uuid::new_v4().to_string(),
+            password: "everythinghastostartsomewhere".into()
         }
     }
 
@@ -204,6 +216,8 @@ impl TestUser {
         .hash_password(self.password.as_bytes(), &salt)
         .unwrap()
         .to_string();
+
+        dbg!(&password_hash);
 
         sqlx::query!(
             "INSERT INTO users (user_id, username, password_hash)
