@@ -12,6 +12,7 @@ name = "zero2prod"
 
 [dependencies]
 actix-web = "4"
+actix-web-lab = "0.16"
 actix-web-flash-messages = { version = "0.3", features = ["cookies"]}
 actix-session = { version = "0.6", features = ["redis-rs-tls-session"] }
 
